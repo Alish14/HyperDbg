@@ -5,7 +5,7 @@ set(SourceFiles
     "../include/components/optimizations/code/InsertionSort.c"
     "../include/components/optimizations/code/OptimizationsExamples.c"
     "../include/components/spinlock/code/Spinlock.c"
-    "../include/platform/kernel/code/platform_mem.c"
+    "../include/platform/kernel/code/PlatformMemLinux.c"
     "code/broadcast/Broadcast.c"
     "code/broadcast/DpcRoutines.c"
     "code/common/Bitwise.c"

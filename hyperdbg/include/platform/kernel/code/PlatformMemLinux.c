@@ -30,26 +30,13 @@ PlatformAllocateMemory(
     PLAT_SIZE Size
 )
 {
-#ifdef _WIN32
-    // Windows Kernel: Allocate from NonPagedPool
-    PLAT_PTR Result = ExAllocatePoolWithTag(NonPagedPool, Size, POOLTAG);
-
-    if (Result != NULL)
-        RtlSecureZeroMemory(Result, Size);
-
-    return Result;
-#else
-    // Linux Kernel: kzalloc allocates zeroed memory
     PLAT_PTR ptr = kzalloc(Size, GFP_KERNEL);
 
-    if (ptr) {
-        // printk(KERN_INFO "MemAllocKernel: Allocated %zu bytes at %px\n", Size, ptr);
-    } else {
-        printk(KERN_ERR "MemAllocKernel: failed to allocate %zu bytes\n", Size);
+    if (!ptr) {
+        printk(KERN_ERR "HyperDbg: PlatformAllocateMemory failed for size %zu\n", Size);
     }
 
     return ptr;
-#endif
 }
 
 /**
@@ -64,14 +51,9 @@ PlatformFreeMemory(
     PLAT_PTR Memory
 )
 {
-    if (!Memory) return;
-
-#ifdef _WIN32
-    ExFreePoolWithTag(Memory, POOLTAG);
-#else
-    // printk(KERN_INFO "MemFree: Freeing memory at %px\n", Memory);
-    kfree(Memory);
-#endif
+    if (Memory) {
+        kfree(Memory);
+    }
 }
 
 /**
@@ -87,22 +69,20 @@ PlatformFreeMemory(
  */
 PLAT_STATUS
 PlatformWriteMemory(
-    PLAT_PTR Process,
-    PLAT_PTR Address,  // Destination
-    PLAT_PTR Buffer,   // Source
+    PLAT_PTR Address,
+    PLAT_PTR Buffer,
     PLAT_SIZE Size
 )
 {
-    // Check for null pointers
-    if (!Address || !Buffer) return PLAT_FAIL;
+    if (!Address || !Buffer) {
+        return PLAT_FAIL;
+    }
 
-#ifdef _WIN32
-    RtlCopyMemory(Address, Buffer, Size);
-    return PLAT_SUCCESS;
-#else
+    // In a simple kernel module context, memcpy works for kernel-to-kernel copy.
+    // Note: If writing to userspace or read-only pages, specialized APIs are needed.
     memcpy(Address, Buffer, Size);
+
     return PLAT_SUCCESS;
-#endif
 }
 
 /**
@@ -121,11 +101,7 @@ PlatformSetMemory(
     PLAT_SIZE Size
 )
 {
-    if (!Destination) return;
-
-#ifdef _WIN32
-    RtlFillMemory(Destination, Size, Value);
-#else
-    memset(Destination, Value, Size);
-#endif
+    if (Destination) {
+        memset(Destination, Value, Size);
+    }
 }

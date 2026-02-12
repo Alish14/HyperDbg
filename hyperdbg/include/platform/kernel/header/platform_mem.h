@@ -1,48 +1,67 @@
 /**
- * @file platform_mem.h
- * @author Behrooz Abbassi (BehroozAbbassi@hyperdbg.org)
- * @author Sina Karvandi (sina@hyperdbg.org)
- * @brief Cross platform APIs for memory allocation
- * @details
- * @version 0.1
- * @date 2022-01-17
- *
- * @copyright This project is released under the GNU Public License v3.
- *
+* @file platform_mem.h
+ * @brief Cross-platform memory allocation API definition.
+ * @details This header defines the unified interface for memory operations
+ *          on Windows and Linux kernels.
  */
 #pragma once
-#include "platform_types.h"
 
 //////////////////////////////////////////////////
-//				     Functions		      		//
+//                  Types                       //
 //////////////////////////////////////////////////
 
-PLAT_STATUS
-PlatformReadMemory(
-    PLAT_PTR  Process,
-    PLAT_PTR  Address,
-    PLAT_PTR  Buffer,
-    PLAT_SIZE Size
-);
+#if defined(_WIN32)
+    #include <ntddk.h>
+    // Pool Tag 'gmEM' (reversed for Little Endian readability in dump)
+    #ifndef POOLTAG
+    #define POOLTAG 'gmEM'
+    #endif
 
-PLAT_STATUS
-PlatformWriteMemory(
-    PLAT_PTR  Process,
-    PLAT_PTR  Address,
-    PLAT_PTR  Buffer,
-    PLAT_SIZE Size
-);
+    typedef PVOID       PLAT_PTR;
+typedef SIZE_T      PLAT_SIZE;
+typedef NTSTATUS    PLAT_STATUS;
 
-PLAT_PTR
-PlatformAllocMemory(
-    PLAT_SIZE Size
-);
+#define PLAT_SUCCESS STATUS_SUCCESS
+#define PLAT_FAIL    STATUS_UNSUCCESSFUL
 
-void
-PlatformFreeMemory(
-    PLAT_PTR Memory
-);
-//#elif defined(_WIN32)
-//#else
-//#error "Unsupported platform"
-//#endif
+#elif defined(__linux__) || defined(linux)
+#include <linux/types.h>
+#include <linux/string.h>
+#include <linux/slab.h>
+
+typedef void*       PLAT_PTR;
+typedef size_t      PLAT_SIZE;
+typedef int         PLAT_STATUS;
+
+#define PLAT_SUCCESS 0
+#define PLAT_FAIL    -1
+#else
+#error "Unsupported Platform"
+#endif
+
+//////////////////////////////////////////////////
+//                API Prototypes                //
+//////////////////////////////////////////////////
+
+/**
+ * @brief Allocates a contiguous block of zeroed memory.
+ */
+PLAT_PTR PlatformAllocateMemory(PLAT_SIZE Size);
+
+/**
+ * @brief Frees a previously allocated memory block.
+ */
+void PlatformFreeMemory(PLAT_PTR Memory);
+
+/**
+ * @brief Writes data from a source buffer to a destination address.
+ * @param Address Destination (Write Target)
+ * @param Buffer Source (Data to write)
+ * @param Size Number of bytes
+ */
+PLAT_STATUS PlatformWriteMemory(PLAT_PTR Address, PLAT_PTR Buffer, PLAT_SIZE Size);
+
+/**
+ * @brief Sets a block of memory to a specific value.
+ */
+void PlatformSetMemory(PLAT_PTR Destination, int Value, PLAT_SIZE Size);
